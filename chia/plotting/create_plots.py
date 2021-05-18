@@ -1,11 +1,11 @@
 import logging
+import json
 from datetime import datetime
 from pathlib import Path
 from secrets import token_bytes
 from typing import List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G1Element, PrivateKey
-from chiapos import DiskPlotter
 
 from chia.plotting.plot_tools import add_plot_directory, stream_plot_info_ph, stream_plot_info_pk
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
@@ -64,32 +64,12 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
         pool_public_key = G1Element.from_bytes(bytes.fromhex(args.pool_public_key))
     else:
         if args.pool_contract_address is None:
-            # If nothing is set, farms to the provided key (or the first key)
             pool_public_key = get_pool_public_key(args.alt_fingerprint)
         else:
-            # If the pool contract puzzle hash is set, use that
             pool_contract_puzzle_hash = decode_puzzle_hash(args.pool_contract_address)
 
     assert (pool_public_key is None) != (pool_contract_puzzle_hash is None)
     num = args.num
-
-    if args.size < config["min_mainnet_k_size"] and test_private_keys is None:
-        log.warning(f"Creating plots with size k={args.size}, which is less than the minimum required for mainnet")
-    if args.size < 22:
-        log.warning("k under 22 is not supported. Increasing k to 22")
-        args.size = 22
-
-    if pool_public_key is not None:
-        log.info(
-            f"Creating {num} plots of size {args.size}, pool public key:  "
-            f"{bytes(pool_public_key).hex()} farmer public key: {bytes(farmer_public_key).hex()}"
-        )
-    else:
-        assert pool_contract_puzzle_hash is not None
-        log.info(
-            f"Creating {num} plots of size {args.size}, pool contract address:  "
-            f"{args.pool_contract_address} farmer public key: {bytes(farmer_public_key).hex()}"
-        )
 
     tmp_dir_created = False
     if not args.tmp_dir.exists():
@@ -103,9 +83,8 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
 
     mkdir(args.final_dir)
 
-    finished_filenames = []
+
     for i in range(num):
-        # Generate a random master secret key
         if test_private_keys is not None:
             assert len(test_private_keys) == num
             sk: PrivateKey = test_private_keys[i]
@@ -125,16 +104,13 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
             plot_memo = stream_plot_info_ph(pool_contract_puzzle_hash, farmer_public_key, sk)
 
         if args.plotid is not None:
-            log.info(f"Debug plot ID: {args.plotid}")
             plot_id = bytes32(bytes.fromhex(args.plotid))
 
         if args.memo is not None:
-            log.info(f"Debug memo: {args.memo}")
             plot_memo = bytes.fromhex(args.memo)
 
         # Uncomment next two lines if memo is needed for dev debug
         plot_memo_str: str = plot_memo.hex()
-        log.info(f"Memo: {plot_memo_str}")
 
         dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
@@ -158,28 +134,24 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
                 config = add_plot_directory(resolved_final_dir, root_path)
 
         if not full_path.exists():
-            log.info(f"Starting plot {i + 1}/{num}")
-            # Creates the plot. This will take a long time for larger plots.
-            plotter: DiskPlotter = DiskPlotter()
-            plotter.create_plot_disk(
-                str(args.tmp_dir),
-                str(args.tmp2_dir),
-                str(args.final_dir),
-                filename,
-                args.size,
-                plot_memo,
-                plot_id,
-                args.buffer,
-                args.buckets,
-                args.stripe_size,
-                args.num_threads,
-                args.nobitfield,
-            )
-            finished_filenames.append(filename)
+            myjson = {
+                "tmp_dir": str(args.tmp_dir),
+                "tmp2_dir": str(args.tmp2_dir),
+                "final_dir": str(args.final_dir),
+                "filename": filename,
+                "size": args.size,
+                "plot_memo": plot_memo_str,
+                "plot_id": plot_id.__str__(),
+                "buffer": args.buffer,
+                "stripe_size": args.stripe_size,
+                "num_threads": args.num_threads,
+                "nobitfield": args.nobitfield
+            }
+            json_dump = json.dumps(myjson)
+            print(json_dump)
+            print(plot_id)
         else:
             log.info(f"Plot {filename} already exists")
-
-    log.info("Summary:")
 
     if tmp_dir_created:
         try:
@@ -192,7 +164,3 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
             args.tmp2_dir.rmdir()
         except Exception:
             log.info(f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty.")
-
-    log.info(f"Created a total of {len(finished_filenames)} new plots")
-    for filename in finished_filenames:
-        log.info(filename)
