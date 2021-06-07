@@ -51,8 +51,22 @@ Once installed, a
 is available from the repository
 [wiki](https://github.com/Chia-Network/chia-blockchain/wiki).
 
-## Generating JSON argument files
-
+<<<<<<< HEAD
+## Working with the included Dockerfile
+### Dockerhub login
 ```
-chia plots create --json
+make docker-login user=xxx email=xxx password=xxx
+```
+### Build image
+```
+make docker-build
+```
+### Push image
+```
+make docker-push user=xxx
+```
+### Running
+```
+CHIA_CFG_PATH=${HOME}/.chia
+docker run --rm -v ${CHIA_CFG_PATH}:/root/.chia -it chia-blockchain:cac5c545 chia plots create -k 32 -f xxx -p xxx --json | tail -n1
 ```
