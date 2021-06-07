@@ -51,6 +51,7 @@ Once installed, a
 is available from the repository
 [wiki](https://github.com/Chia-Network/chia-blockchain/wiki).
 
+<<<<<<< HEAD
 ## Working with the included Dockerfile
 ### Dockerhub login
 ```
@@ -67,5 +68,5 @@ make docker-push user=xxx
 ### Running
 ```
 CHIA_CFG_PATH=${HOME}/.chia
-docker run --rm -v ${CHIA_CFG_PATH}:/root/.chia -it chia-blockchain:cac5c545 chia plots create -k 32 -f 86900c5d26f26218afe1940cbfa90f1e8fa1ff37150720f46e5271712a6047c3dc783e3d793dd363e0d5df19b8961969 -p 91c9f95870989b0cb4430a8bc6c277c1b755969bca583a5111e0c884451eac5bd03b43e3b3ade2ddfbc3b03541dfe1f3 --json|tail -n1
+docker run --rm -v ${CHIA_CFG_PATH}:/root/.chia -it chia-blockchain:cac5c545 chia plots create -k 32 -f xxx -p xxx --json | tail -n1
 ```
